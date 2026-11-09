@@ -2,7 +2,7 @@
 
 The plugins ship the mapping documents to `$ROOT/model/<source>.json` (contract §12); the apps' interpreters are still to come.
 
-**The idea.** Event files stay exactly as contract v1 defines them: the agent's raw payload, byte for byte, in the v1 envelope. subspace additionally publishes one **mapping document** per source ([`model/claude-code.json`](../model/claude-code.json), [`model/codex.json`](https://github.com/we-are-the-borg/subspace/blob/claude-code-1.4.0/model/codex.json)). It says where in the raw payload each **target field** is. Apps apply it with a small generic interpreter (§5). When an agent changes its payloads, subspace changes the mapping document and releases; the apps need no update.
+**The idea.** Event files stay exactly as contract v1 defines them: the agent's raw payload, byte for byte, in the v1 envelope. subspace additionally publishes one **mapping document** per source ([`model/claude-code.json`](../model/claude-code.json), [`model/codex.json`](https://github.com/we-are-the-borg/subspace/blob/claude-code-1.5.0/model/codex.json)). It says where in the raw payload each **target field** is. Apps apply it with a small generic interpreter (§5). When an agent changes its payloads, subspace changes the mapping document and releases; the apps need no update.
 
 The result of applying a mapping to one payload looks like this:
 
@@ -16,7 +16,7 @@ It is a small **core** with the same meaning for every source, plus **one block 
 
 **What the mapping solves and what it doesn't.** It answers "where is the value": a renamed, moved or newly added key is handled by changing the mapping alone. It doesn't answer "what does it mean": when an event changes its meaning or new semantics arrive (for example a link field that enables a new correlation rule), apps still change their logic.
 
-**Evidence.** Every mapping is derived from the real captures in `fixtures/claude-code/2.1.285/`, `fixtures/claude-code/2.1.287/`, `fixtures/claude-code/2.1.288/`, `fixtures/claude-code/2.1.289/`, `fixtures/claude-code/2.1.316/`, `fixtures/claude-code/2.1.318/` and `fixtures/codex/0.159.3/`, and nothing else. Short references: **C2-014** is `fixtures/claude-code/2.1.285/2-…/events/014-*.json`, **S4-010** is `fixtures/claude-code/2.1.287/4-…/events/010-*.json` or `…/status/010-status.json` (S15 is in `2.1.288/15-…`, S16–S18 in `2.1.289/16-…` to `18-…`, S19 and S20 in `2.1.316/19-…` and `20-…`, S22 and S24 in `2.1.318/22-…` and `24-…`), **X1-008** is `fixtures/codex/0.159.3/1-…/events/008-*.json`. The runs:
+**Evidence.** Every mapping is derived from the real captures in `fixtures/claude-code/2.1.285/`, `fixtures/claude-code/2.1.287/`, `fixtures/claude-code/2.1.288/`, `fixtures/claude-code/2.1.289/`, `fixtures/claude-code/2.1.316/`, `fixtures/claude-code/2.1.318/`, `fixtures/claude-code/2.1.319/`, `fixtures/codex/0.159.3/` and `fixtures/codex/0.167.0/`, and nothing else. Short references: **C2-014** is `fixtures/claude-code/2.1.285/2-…/events/014-*.json`, **S4-010** is `fixtures/claude-code/2.1.287/4-…/events/010-*.json` or `…/status/010-status.json` (S15 is in `2.1.288/15-…`, S16–S18 in `2.1.289/16-…` to `18-…`, S19 and S20 in `2.1.316/19-…` and `20-…`, S22 and S24 in `2.1.318/22-…` and `24-…`, S25 in `2.1.319/25-…`), **X1-008** is `fixtures/codex/0.159.3/1-…/events/008-*.json`, **R2-004** is `fixtures/codex/0.167.0/2-…/events/004-*.json`. The runs:
 
 - Claude Code 2.1.285: C1 headless parallel subagents; C2 interactive background subagents, compact and exit; C3 permission and Ctrl-C.
 - Claude Code 2.1.287, hook events plus session status files (§12): S1 idle and exit; S2 Esc and Ctrl-C mid-turn; S3 Esc mid-tool; S4 permission and question waits; S5 `!` shell; S6 background subagents; S6a background shell, exit dialog, killed; S7 `--continue`; S8 `kill -9`; S9 `claude -p`; S11 `/exit` without a prompt; S12 failing tool; S13 file tools; S14 terminated before any input.
@@ -24,7 +24,9 @@ It is a small **core** with the same meaning for every source, plus **one block 
 - Claude Code 2.1.289, hook events plus session status files: S16 two `Agent` calls, one with `model: haiku`, one without; S17 `/model sonnet`, then `/clear` in the same process; S18 `--continue` of S17's session with `--model haiku`.
 - Claude Code 2.1.316, hook events plus session status files: S19 `AskUserQuestion` answered with `multiSelect`, free text and a note, then dismissed with Esc; S20 a multi-line `Bash` command (heredoc) behind a permission prompt.
 - Claude Code 2.1.318, hook events plus session status files: S22 a background session (`claude --bg`), ended with `claude stop`; S24 another one, attached with `claude attach <job>`, one prompt sent through the attach client, detached with Ctrl+Z, ended with `claude stop`.
-- Codex: X1 parallel and reused children plus a failed command; X2 daemon permission and compact; X3 manual permission and rejection; X4/X5 interrupt before a tool; X6/X7 interrupt of a running shell; X8 resume; X9 ephemeral; X10 cwd with spaces.
+- Claude Code 2.1.319, hook events plus session status files: S25 a sonnet session that sets every effort level with `/effort`, one failing tool, then, at the session-only level `max` while `xhigh` is saved as the default, two `Agent` calls, one with its own `effort: "high"`, one inheriting.
+- Codex 0.159.3: X1 parallel and reused children plus a failed command; X2 daemon permission and compact; X3 manual permission and rejection; X4/X5 interrupt before a tool; X6/X7 interrupt of a running shell; X8 resume; X9 ephemeral; X10 cwd with spaces.
+- Codex 0.167.0, hook events plus rollout excerpts: R1 automatic review, four approvals, two of them concurrent in one turn; R2 automatic review, one rejection and two approvals; R3 manual reviewer, one approval and one denial; R4 reasoning effort: one turn at `low`, `/model` to `high` for the session, one turn, then one child agent.
 
 ## 1. Principles
 
@@ -116,6 +118,7 @@ Unobserved hooks get their kind and the fields that hold on every hook (`transcr
 | `transcript_path` | string | `transcript_path`, every hook; the session's transcript, also inside subagents | C1-001, C1-009 |
 | `prompt_id` | non-empty string | `prompt_id`, every hook after the first prompt | C1-004; absent C1-001…003 |
 | `permission_mode` | string | `permission_mode` | C1-004, C2-031 (`plan`) |
+| `effort` | string | `effort.level` on `PreToolUse`, `PostToolUse`, `PostToolUseFailure`, `PostToolBatch`, `PermissionRequest`, `Stop`, `SubagentStop`: the effort level the agent that fired the event runs at. Absent on every other hook, also on the ones fired after a model call (`UserPromptSubmit`, `SessionEnd`), and for models without effort support (haiku). See §3.3 "Effort" | S25-008 `medium` (default), S25-018 `low`, S25-038 `high`, S25-048 `xhigh`, S25-057 `max`, S25-066 (`PostToolUseFailure`), S19-010, S20-010 (`PermissionRequest`), S25-080 `high` (subagent's own), S25-084 `max` (inherited from the orchestrator); absent S25-002, S25-007, S25-017 (`UserPromptSubmit` after model calls), S25-074, S25-077, S25-100 (`SessionEnd`), S4 and S16's haiku subagent, all of 2.1.285 |
 | `agent_type` | string, **may be empty** | `agent_type`, subagent events | C1-009; `""` C2-025 |
 | `start_source` | string | `source` on `SessionStart` | C1-001 `startup`, C2-032 `compact`, S7-003 `resume`, S17-015 `clear` |
 | `model` | string | `model` on `SessionStart`: the model the process starts the session with. **Only on a `startup` of an interactive or background session (not headless) and on `compact`**; absent on `clear`, `resume` and headless (`claude -p`). See §3.3 "Session model" | C2-001, C2-032, S17-002, S22-004 (background); absent S17-015 (`clear`), S7-003 and S18-003 (`resume`), C1-001 and S9-004 (headless) |
@@ -184,6 +187,11 @@ Left in `payload` because no app uses them today: `scratchpad_dir`, `Instruction
   - **Answered:** the `tool.post` (block `tool.post`, same `tool_call`) carries `questions` again plus `answers` and `annotations`. Tie an answer to its question by the question text: `answers[questions[i].question]`. A question without a key in `answers` is unanswered.
   - An answer is **one string** in every case: a single choice is its `label` (S19-024 `List`); a `multiSelect` answer joins the chosen labels with `", "` (S19-013 `apple, cherry`), so a label containing `", "` can't be split back reliably; a free-text answer ("Type something") is the typed text, with no marker (S19-013 `a parrot`). Compare with the option labels to tell them apart, never assume a match.
   - **Dismissed** with Esc: **no hook event at all**, no `tool.post`, no `tool.failure`, no `turn.stop` (S19, third call). Only the session status file shows it, going from `waiting` to `idle` (S19-035). Without it, the question stays open until a later event of the session (the next `turn.start`) or a timeout.
+- **Effort** (S25; S4, S16, S17). `effort` is the effort level of the **agent that fired the event, not the session's**: a subagent whose `Agent` call sets `effort` runs at that level (S25-080, S25-081, S25-082, S25-087 `high` while the session is at `max`), one without it inherits the orchestrator's current level (S25-084, S25-085, S25-086, S25-089 `max`), not the default saved for new sessions (`xhigh` at that point, logged in S25's timeline). Rules for apps:
+  - It is only on the seven hooks named in §3.2. Every other hook never carries it, whether or not a model call came before: `session.start`, `turn.start` (S25-007, also S25-017 and every later turn), `agent.start` (S25-074, S25-077), `session.end` (S25-100) and the rest; take an agent's effort from its latest event that has it.
+  - Absent for models without effort support: haiku sends none (S4; S17 before `/model`; S16's haiku subagent `a99b925b…`, while S16's inheriting sonnet subagent carries `medium`). Absent means unknown, not a level.
+  - `/effort` fires **no hook**, no `config.change` either (S25). A change shows only on the next event that carries `effort` (S25-018 after `/effort low`).
+  - Values Claude Code knows: `low`, `medium`, `high`, `xhigh`, `max`; all observed in S25, sonnet's default is `medium` (S25-008…013). Per the TUI, `max` is for this session only, the other levels are saved as the default for new sessions. The value is the level after any silent downgrade for the model (Claude Code's own description); a downgrade or an organization's cap is unobserved. Treat unknown values as opaque strings.
 - **Session end.** `session.end` is sticky. After a crash it may be missing; the `claude` process is the envelope `pid` of the session's latest event other than `session.end`, never a `pid` of 1 (contract §6, "Liveness").
 
 ## 4. Codex (`codex`)
@@ -195,7 +203,7 @@ Left in `payload` because no app uses them today: `scratchpad_dir`, `Instruction
 | `SessionStart` | `session.start` | `session.start` | X1-001, X2-014, X8-001 |
 | `UserPromptSubmit` | `turn.start` | `turn.start` | X1-002 |
 | `PreToolUse` | `tool.pre` | `tool.pre` | X1-003 |
-| `PermissionRequest` | `permission.request` | `permission.request` | X2-004 |
+| `PermissionRequest` | `permission.request` | `permission.request` | X2-004, R1-004 |
 | `PostToolUse` | `tool.post` | `tool.post` | X1-004 |
 | `PreCompact` / `PostCompact` | `compact.start` / `compact.end` | same | X2-012 / X2-013 |
 | `SubagentStart` | `agent.start` | `agent.start` | X1-009, X1-015 |
@@ -205,6 +213,8 @@ Left in `payload` because no app uses them today: `scratchpad_dir`, `Instruction
 | anything else | `unknown` | `unknown` | – |
 
 ### 4.2 Fields, Codex 0.159.3
+
+Unchanged in 0.167.0 for every hook R1–R4 cover, child events and the `spawn_agent` and `wait_agent` calls included (R4-011…018).
 
 | Block field | Type | From the payload, on which hooks | Evidence |
 |---|---|---|---|
@@ -235,7 +245,19 @@ Left in `payload`: `stop_hook_active`, and `tool_input.message` of spawns, which
   - Child turns close with `agent.turn.stop`. A child can be reused: it becomes active again under a new `turn_id` without a new `agent.start` (X1-014 closes `…221c…`, X1-024 opens `…804b…`, X1-026 closes it).
   - A late `tool.post` for a closed turn closes only its call (X6-009, after X6-008).
 - **Tool result: unknown, always.** There is no outcome field. The failed `sh -c "exit 7"` has `tool_response: ""` (X1-006), exactly like successful calls (X1-022, X2-005). Exit codes exist only in the rollout.
-- **Permissions.** Match a `permission.request` to the call with equal (`session`, `agent`, `turn_id`, `tool_name`, `command`), regardless of arrival order (before the pre: X2-008/009, X3-003/004; after: X2-003/004). Don't compare `tool_input` whole: the request adds `description`. Several candidates → leave it unmatched. A rejection ends the turn with `turn.interrupt` (X3-008…010). A remembered approval sends no request (X3-017).
+- **Permissions.** Match a `permission.request` to the call with equal (`session`, `agent`, `turn_id`, `tool_name`, `command`), regardless of arrival order (before the pre: X2-008/009, X3-003/004; after: X2-003/004, and every request in 0.167.0, R1-003/004, R3-003/004). Concurrent calls in one turn: both pres, then both requests in the opposite order (R1-013…016); distinct commands keep them apart. Don't compare `tool_input` whole: the request adds `description`. Several candidates → leave it unmatched. A remembered approval sends no request (X3-017).
+- **Who answers a request.** Codex asks its automatic reviewer instead of the user when `approvals_reviewer` is `auto_review` (`--approve-for-me`, or set in the config). No payload field tells, and no hook marks the decision (`permission_mode: default` under both, R1-004, R3-004). The turn's rollout does: its `turn_context` record with the same `turn_id` has `payload.approvals_reviewer`, `auto_review` (R1, R2) or `user` (R3) (`rollouts/excerpt.jsonl` of each run). That is app work, like the child ↔ spawn link: read it from the event's `rollout_path`.
+  - `auto_review`: Codex is reviewing. Show the request as such and don't notify the user.
+  - `user`, any other value, no such record, no readable rollout, or `rollout_path: null` (ephemeral): the request waits for the user.
+  - Approved (either reviewer): the call's `tool.post` follows once the command has run (R1-005, R3-005); close the request there.
+  - Rejected by the automatic reviewer: **no `tool.post` and no `turn.interrupt`**; the turn goes on and ends with `turn.stop` (R2-003…005). Close the request at the latest with that `turn.stop`. The rollout has the rejection only as the call's output text (`Rejected(…)`, R2 excerpt).
+  - Denied by the user: `turn.interrupt` ends the turn (X3-008…010, R3-008…010).
+  - Unobserved: the automatic reviewer handing a request to the user, and further calls in a turn after a rejection.
+- **Effort** (R4; R1–R3). No payload carries the reasoning effort (R4-001…019; `model` is in each). The turn's rollout does, with the same lookup as for the reviewer: its `turn_context` record with the same `turn_id` has `payload.effort` and `payload.model`, strings in every record of R1–R4 (`rollouts/excerpt.jsonl` of each run). That is app work: read it from the event's `rollout_path`. Rules for apps:
+  - **Per thread.** A child's events have the child's `turn_id` and `rollout_path` (the child's rollout, also on `agent.turn.stop`), so the lookup finds the child's own record, not the parent's. R4's child runs at `medium` on `gpt-5.6-luna` (excerpt line 4, `root_turn_id` = turn 3; R4-013, R4-015…017) while its parent's turn 3 runs at `high` on `gpt-6.1-sol` (line 3; R4-010…012, R4-014, R4-018, R4-019). The spawn call set neither (R4-011); the values are the capture machine's `[agents] default_subagent_model` and `default_subagent_reasoning_effort`.
+  - **A change shows from the next turn.** `/model` sends no hook event. R4 turn 1 runs at `low` (line 1; R4-002…005, started with `-c 'model_reasoning_effort="low"'`); after `/model` → same model → High for this session, turn 2 has `high` (line 2; R4-006…009), turn 1's record stays `low`.
+  - **Unknown** before the first turn (`session.start` has no `turn_id`), and when there is no such record, no readable rollout, or `rollout_path: null` (ephemeral). The rollout may lag the hooks (contract §8).
+  - **Values:** captured `low`, `medium`, `high` (R1–R3: `high` everywhere). Codex offers others depending on the model, none of them captured: its documentation names `none`, `minimal` and `xhigh`, and the `/model` picker for `gpt-6.1-sol` also offered Extra high, Max and Ultra. Treat values as opaque strings and show unknown ones as they are.
 - **Child ↔ spawn** (core `tool: spawn_agent`): the spawn's post has `spawn_task` (`/root/alpha`). No child event names its task path or spawning call (X1-009 … X1-026). The link needs the child rollout's first `session_meta` line (`payload.source.subagent.thread_spawn.agent_path`); the child's `rollout_path` points to that file (X1-009, `rollouts/session_meta.jsonl` of X1). That is app work. In ephemeral sessions (`rollout_path: null`, X9) children stay unassigned. The parent is the core `agent` of the spawning call (absent: the root). Never assign by order: X1-015 arrives after X1-014.
 - **Session end.** There is no end event (`SessionEnd` is never subscribed). Apps infer inactivity from a timeout; the envelope `pid` can be a shared app-server (contract §6).
 
@@ -338,7 +360,7 @@ fixtures/<source>/<version>/<run>/
 ```
 
 - Content: the result object (§5), pretty-printed with two spaces, LF line endings and a trailing newline. Comparison is semantic (as JSON values).
-- All 445 fixture events (337 Claude Code, 108 Codex) and all 127 status snapshots (Claude Code 2.1.287 to 2.1.318) have one. A new capture adds its `expected/` files in the same PR; `python3 tools/model/apply.py model/<source>.json < events/F` prints a first version to review by hand.
+- All 564 fixture events (407 Claude Code, 157 Codex) and all 157 status snapshots (Claude Code 2.1.287 to 2.1.319) have one. A new capture adds its `expected/` files in the same PR; `python3 tools/model/apply.py model/<source>.json < events/F` prints a first version to review by hand.
 - The existing globs (`fixtures/*/*/*/events/*.json` in CI and `tools/e2e/check.sh`) don't see `expected/`.
 
 **CI check** (`tests/model.test.py`): for every `events/F`, apply `model/<source>.json` with the reference interpreter `tools/model/apply.py` and compare with `expected/F`; fail if an `events/` file has no `expected/` file or the other way round. Likewise `status/F` with `model/<source>-session.json` and `status-expected/F`. The same test covers each rule of §5.1 and checks that every adapter ships its own mapping unchanged. CI also validates the mapping documents and golden files against their schemas (§11). The reference interpreter runs only in CI and tests, never in the hook. The golden files are also the test suite for each app's interpreter: both apps run their own interpreter over the same fixtures and mappings.
@@ -350,6 +372,8 @@ fixtures/<source>/<version>/<run>/
 | Root/subagent attribution | core `agent` | – |
 | Tool pairing | core `tool_call` | pairing across files |
 | Permission ↔ call | the match fields (§3.3, §4.3) | matching, ambiguity |
+| Who answers a permission, Codex | `turn_id`, `rollout_path` | reading `turn_context.approvals_reviewer` from the rollout (§4.3) |
+| Effort, Codex | `turn_id`, `rollout_path` | reading `turn_context.effort` from the rollout (§4.3) |
 | Subagent ↔ spawn, Claude Code | `spawned_agent` on the `Agent` post; `parent_tool_use_id` once sent | earlier link via `meta.json` |
 | Child ↔ spawn, Codex | `spawn_task`, child `rollout_path` | reading `session_meta` from the rollout |
 | Turn/agent state | block kinds and turn IDs | sticky state, timeouts |
@@ -372,12 +396,13 @@ Checked against today's logic in The Collective (`ClaudeCodeAdapter.swift`) and 
 |---|---|
 | Session start, `cwd`, end | core `session.start`, `cwd`; Claude Code `session.end`, `end_reason` |
 | Session model | Claude Code `model`, `to_model`, carried over per `pid` on `clear` (§3.3 "Session model") |
+| Effort level per agent | Claude Code `effort`, from the agent's latest event that has it (§3.3 "Effort"); Codex: none in the hooks; `turn_id` and `rollout_path`, for reading the turn's `turn_context.effort` from the rollout (§4.3 "Effort") |
 | Prompt text, notification prompts | block `prompt`; Claude Code `<task-notification>` / `<agent-message ` prefix |
 | Tool activity and a one-line detail | core `tool.pre`, `tool`; block `tool_name`, `tool_input` (`file_path`, …); `command` in both sources, Claude Code `command_description` |
 | Tool pairing, late pre | core `tool_call` |
 | Subagent tree, title, prompt, background, model | core `agent`; Claude Code `spawn_*`, `spawned_agent`, `spawned_async`, `spawned_model`; Codex `spawn_name`, `spawn_task` |
 | Internal agents | Claude Code `agent_type: ""` |
-| Waiting for the user | core `permission.request`; Claude Code `notification_type` |
+| Waiting for the user | core `permission.request`; Claude Code `notification_type`; Codex: unless the rollout names the automatic reviewer (§4.3) |
 | Questions to the user and their answers | Claude Code `questions` (while open), `answers`, `annotations` on the post (§3.3 "Questions") |
 | Done | core `turn.stop` plus open agents; Claude Code `background_agents` (also ends agents stopped by the user, which send no `agent.stop`) |
 | Background shells, count and description | Claude Code `background_shells`, `spawned_shell`; session status `shell` (§12.2) |
@@ -392,9 +417,10 @@ Anything else an app wants is still in `payload`; reading it there couples that 
 **Claude Code**
 - No user-interrupt event (the session status file covers it, §12), and no turn ID inside subagents (`prompt_id` is the orchestrator's).
 - `parent_tool_use_id` is unobserved; its target field is defined ahead of the capture.
-- MCP tools, `NotebookEdit`, the older `Task` name, `StopFailure` and ten more hooks are unobserved. The 2.1.287 captures cover `Write`/`Edit`/`Read`/`Grep`/`Glob` (S13) and `PostToolUseFailure` (S12). Their drift against 2.1.285 (`effort`, `prompt_id` on `InstructionsLoaded`, cache keys on `SessionStart`, `permission_suggestions` going missing) touches no target field.
+- MCP tools, `NotebookEdit`, the older `Task` name, `StopFailure` and ten more hooks are unobserved. The 2.1.287 captures cover `Write`/`Edit`/`Read`/`Grep`/`Glob` (S13) and `PostToolUseFailure` (S12). Their drift against 2.1.285 (`prompt_id` on `InstructionsLoaded`, cache keys on `SessionStart`, `permission_suggestions` going missing) touches no target field; the `effort` key they added became the target field `effort` with 2.1.319 (S25).
 - The session's model is missing after `/clear`, on `resume` and in headless sessions (S17, S18, C1, S9); apps carry it over on `clear` only (§3.3).
 - Subagent resume ("the same task-id may notify more than once", C2-021) is unobserved.
+- `effort` after a silent downgrade or an organization's effort cap is unobserved (S25 on sonnet accepted every level), and so is every model with effort support other than sonnet. A `/effort` change sends no event; until the agent's next model call apps show the old level.
 - A background agent stopped by the user has no end event; only its absence from `background_agents` shows it (S15). Stopping a single agent from the task list, rather than all with Ctrl+X Ctrl+K, is unobserved.
 - A question dismissed with Esc has no end event (S19); only the session status file shows it. Whether a `multiSelect` answer lists its labels in option order or in the order the user picked them is open (S19 picked them in option order). An equivalent question tool in Codex is unchecked.
 - A short-lived session status file of a `claude bg-spare` process that names another process's session (contract §13) is observed only by its effect; the `claude attach` captured in S24 did not reproduce it (no new file in `sessions/`).
@@ -403,6 +429,8 @@ Anything else an app wants is still in `payload`; reading it there couples that 
 **Codex**
 - Child ↔ spawn needs the rollout, and is impossible in ephemeral sessions. Nested spawning and reuse across resume are unobserved.
 - There is no tool outcome at all.
+- No hook tells who answers a permission request or what the automatic reviewer decided; only the rollout's `turn_context` names the reviewer, and a rejection ends nothing (R2, §4.3). A hand-over from the automatic reviewer to the user is unobserved.
+- The effort, too, is only in the rollout's `turn_context` (§4.3). Captured are `low`, `medium` and `high` only; `none`, `minimal`, `xhigh`, the picker's Max and Ultra, and a model without reasoning are not. The only child captured got its model and effort from the `[agents] default_subagent_*` config (R4); a child without that config, one whose spawn call sets them, and a `/model` switch while a turn runs are unobserved.
 - A child announces only its first turn.
 - There is no session end and no background snapshot.
 - Code-mode and MCP tool names are unobserved.
@@ -413,8 +441,8 @@ Anything else an app wants is still in `payload`; reading it there couples that 
 
 ## 11. JSON Schemas
 
-- `schema/<source>/result.v1.json` ([Claude Code](https://github.com/we-are-the-borg/subspace/blob/claude-code-1.4.0/schema/claude-code/result.v1.json), `$id` `urn:subspace:result:claude-code:v1`; [Codex](https://github.com/we-are-the-borg/subspace/blob/claude-code-1.4.0/schema/codex/result.v1.json), `urn:subspace:result:codex:v1`): the result of applying that source's mapping: the core (§2), identical in both (`tests/model.test.py` checks it), plus that source's block. Blocks are closed, so a mapping can't produce a field the target model doesn't define; adding a target field ships mapping and schema together.
-- [`schema/claude-code/session-status.v1.json`](https://github.com/we-are-the-borg/subspace/blob/claude-code-1.4.0/schema/claude-code/session-status.v1.json) (`$id` `urn:subspace:session-status:claude-code:v1`): the result of applying a session-status mapping (§12), closed like the result schema.
+- `schema/<source>/result.v1.json` ([Claude Code](https://github.com/we-are-the-borg/subspace/blob/claude-code-1.5.0/schema/claude-code/result.v1.json), `$id` `urn:subspace:result:claude-code:v1`; [Codex](https://github.com/we-are-the-borg/subspace/blob/claude-code-1.5.0/schema/codex/result.v1.json), `urn:subspace:result:codex:v1`): the result of applying that source's mapping: the core (§2), identical in both (`tests/model.test.py` checks it), plus that source's block. Blocks are closed, so a mapping can't produce a field the target model doesn't define; adding a target field ships mapping and schema together.
+- [`schema/claude-code/session-status.v1.json`](https://github.com/we-are-the-borg/subspace/blob/claude-code-1.5.0/schema/claude-code/session-status.v1.json) (`$id` `urn:subspace:session-status:claude-code:v1`): the result of applying a session-status mapping (§12), closed like the result schema.
 - [`schema/mapping.v1.json`](../schema/mapping.v1.json) (`$id` `urn:subspace:mapping:v1`): a mapping document. It is closed for this repository's own documents, so CI catches typos. Interpreters in the apps still follow §5.1 (unknown keys → field absent), so a newer document with new operations degrades instead of failing.
 
 `schema/*.json` (envelope, mapping) ship in every adapter, `schema/<source>/*.json` only in that source's adapter (`tools/sync.sh`); all land flat in `$ROOT/schema/`. A schema change thereby releases only the adapters it concerns.
